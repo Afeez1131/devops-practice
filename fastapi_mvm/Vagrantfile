@@ -1,0 +1,78 @@
+Vagrant.configure("2") do |config|
+  config.hostmanager.enabled = true 
+  config.hostmanager.manage_host = true
+  
+    ### DB vm  ####
+    config.vm.define "fdb01" do |fdb01|
+        fdb01.vm.box = "bento/ubuntu-22.04"
+        fdb01.vm.hostname = "fdb01"
+        fdb01.vm.boot_timeout = 600
+        fdb01.vm.network "private_network", ip: "192.168.56.32"
+
+        fdb01.vm.provider "vmware_desktop" do |vmware|
+            vmware.gui = true
+            vmware.allowlist_verified = true
+            vmware.memory = 2048
+            vmware.cpus = 2
+        end
+
+    fdb01.vm.provision "shell", 
+        path: "provision_fdb01.sh",
+        env: {
+            "DB_NAME" => "demo",
+            "DB_USER" => "afeez1131",
+            "DB_PASS" => "password"
+        }
+    end
+
+
+    ### Redis cache vm  ####
+    config.vm.define "rd01" do |rd01|
+        rd01.vm.box = "bento/ubuntu-22.04"
+        rd01.vm.hostname = "rd01"
+        rd01.vm.network "private_network", ip: "192.168.56.33"
+
+        rd01.vm.provider "vmware_desktop" do |vmware|
+            vmware.gui = false
+            vmware.allowlist_verified = true
+        end
+
+        rd01.vm.provision "shell", inline: <<-SHELL
+            apt-get update
+            apt-get install -y redis-server
+            export DEBIAN_FRONTEND=noninteractive
+
+            apt-get install -y redis-tools
+
+            # Configure Redis to allow remote connections
+            sed -i "s/bind 127.0.0.1 ::1/bind 0.0.0.0/" /etc/redis/redis.conf
+            systemctl enable redis-server
+            systemctl start redis-server
+
+        SHELL
+    end
+
+
+    ### NGINX vm  ####
+    config.vm.define "ngx01" do |ngx01|
+        ngx01.vm.box = "bento/ubuntu-22.04"
+        ngx01.vm.hostname = "ngx01"
+        ngx01.vm.network "private_network", ip: "192.168.56.34"
+
+        ngx01.vm.provider "vmware_desktop" do |vmware|
+            vmware.gui = false
+            vmware.allowlist_verified = true
+            vmware.memory = 2048   # or at least 1024
+            vmware.cpus = 2
+        end
+
+        ngx01.vm.provision "shell", 
+            path: "provision_ngx01.sh",
+            env: {
+                "DB_NAME" => "demo",
+                "DB_USER" => "afeez1131",
+                "DB_PASS" => "password"
+            }
+
+    end
+end
