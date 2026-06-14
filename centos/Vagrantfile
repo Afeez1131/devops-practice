@@ -5,7 +5,9 @@ Vagrant.configure("2") do |config|
 
   config.vm.provision "shell", inline: <<-SHELL
     yum install httpd wget unzip git -y
+    # Shared directory used as a convention across all DevOps lab VMs for storing scripts and configs
     mkdir /opt/devopsdir
+    # Print memory and uptime on first boot as a quick sanity check that the VM is healthy
     free -m
     uptime
   SHELL

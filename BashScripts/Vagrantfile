@@ -1,8 +1,10 @@
 Vagrant.configure("2") do |config|
 
+    # Control node — run scripts from here and push to web02/db01 over the private network
     config.vm.define "scriptbox" do |scriptbox|
         scriptbox.vm.box = "bento/ubuntu-22.04"
         scriptbox.vm.hostname = "scriptbox"
+        # Private IP for inter-VM communication; public NIC allows host browser access
         scriptbox.vm.network "private_network", ip: "192.168.56.40"
         scriptbox.vm.network "public_network"
 
@@ -25,7 +27,8 @@ Vagrant.configure("2") do |config|
         end
     end
 
-
+    # CentOS intentionally differs from the Ubuntu nodes above —
+    # practises targeting scripts across mixed distros (apt vs yum)
     config.vm.define "db01" do |web02|
         web02.vm.box = "shk/centos-stream-9-arm64"
         web02.vm.hostname = "web02"

@@ -20,6 +20,8 @@ systemctl restart postgresql
 
 echo "==> Creating DB user and database..."
 sudo -u postgres psql <<SQL
+-- DO block makes user creation idempotent: CREATE USER has no IF NOT EXISTS before PG 9.x,
+-- and even on newer versions EXECUTE format() lets us safely interpolate the password
 DO \$\$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${DB_USER}') THEN
@@ -28,6 +30,8 @@ BEGIN
 END
 \$\$;
 
+-- \gexec executes the string returned by SELECT as a SQL command —
+-- the WHERE NOT EXISTS makes database creation idempotent too
 SELECT format('CREATE DATABASE %I OWNER %I', '${DB_NAME}', '${DB_USER}')
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '${DB_NAME}')
 \gexec

@@ -58,14 +58,17 @@ Vagrant.configure("2") do |config|
   #
   #
   config.vm.provider "vmware_desktop" do |vb|
-  vb.memory = "1024"
-  vb.vmx["ethernet0.virtualdev"] = "vmxnet3"
-  vb.vmx["ethernet1.virtualdev"] = "vmxnet3"
-  vb.vmx["ethernet2.virtualdev"] = "vmxnet3"
-  vb.vmx["ethernet0.pciSlotNumber"] = "160"
-  vb.vmx["ethernet1.pciSlotNumber"] = "192"
-  vb.vmx["ethernet2.pciSlotNumber"] = "256"
-end
+    vb.memory = "1024"
+    # vmxnet3 is required on ARM64 (Apple Silicon) VMware Desktop — the default e1000 adapter
+    # loses connectivity when multiple NICs are present (private + public network)
+    vb.vmx["ethernet0.virtualdev"] = "vmxnet3"
+    vb.vmx["ethernet1.virtualdev"] = "vmxnet3"
+    vb.vmx["ethernet2.virtualdev"] = "vmxnet3"
+    # Explicit PCI slot numbers prevent VMware from assigning overlapping addresses across reboots
+    vb.vmx["ethernet0.pciSlotNumber"] = "160"
+    vb.vmx["ethernet1.pciSlotNumber"] = "192"
+    vb.vmx["ethernet2.pciSlotNumber"] = "256"
+  end
   # View the documentation for the provider you are using for more
   # information on available options.
 

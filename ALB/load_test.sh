@@ -1,8 +1,11 @@
 #!/bin/bash
 LB_URL="http://web01lb-996173421.us-east-1.elb.amazonaws.com/"
+# Must match the RequestCountPerTarget threshold set on the ALB target group's scaling policy
 THRESHOLD=37.5
+# CloudWatch needs at least 3 datapoints in a row above threshold to trigger scale-out;
+# 15 gives enough signal while keeping total run time under 15 minutes
 DATAPOINTS=15
-INTERVAL=60  # 1 minute per datapoint
+INTERVAL=60  # 1 minute per datapoint — aligns with CloudWatch's minimum metric resolution
 
 echo "Starting load test - tracking RequestCountPerTarget over $DATAPOINTS datapoints..."
 
@@ -18,7 +21,7 @@ for ((dp=1; dp<=DATAPOINTS; dp++)); do
     END=$(date +%s)
     DURATION=$(( END - START ))
 
-    # Avoid division by zero
+    # Guard: all 200 requests can complete in <1s on a fast connection, making DURATION=0
     if (( DURATION == 0 )); then DURATION=1; fi
 
     # Requests per second in this datapoint window

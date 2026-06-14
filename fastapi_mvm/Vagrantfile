@@ -1,23 +1,31 @@
 Vagrant.configure("2") do |config|
-  config.hostmanager.enabled = true 
+  # hostmanager writes VM hostnames into /etc/hosts on every VM (and the host machine),
+  # so services can reach each other by name (e.g. fdb01, rd01) instead of hardcoded IPs
+  config.hostmanager.enabled = true
   config.hostmanager.manage_host = true
-  
+
     ### DB vm  ####
     config.vm.define "fdb01" do |fdb01|
         fdb01.vm.box = "bento/ubuntu-22.04"
         fdb01.vm.hostname = "fdb01"
+        # PostgreSQL installation + user/db creation takes longer than Vagrant's default 300s timeout
         fdb01.vm.boot_timeout = 600
         fdb01.vm.network "private_network", ip: "192.168.56.32"
 
         fdb01.vm.provider "vmware_desktop" do |vmware|
+            # gui=true here (unlike the other VMs) so you can watch the DB provision
+            # output in the VMware window if something goes wrong during first boot
             vmware.gui = true
+            # Suppresses the VMware security prompt for boxes that aren't on the approved list
             vmware.allowlist_verified = true
+            # PostgreSQL needs more RAM than the default 512 MB to run comfortably
             vmware.memory = 2048
             vmware.cpus = 2
         end
 
-    fdb01.vm.provision "shell", 
+    fdb01.vm.provision "shell",
         path: "provision_fdb01.sh",
+        # Credentials passed as env vars so they aren't hardcoded inside the provision script
         env: {
             "DB_NAME" => "demo",
             "DB_USER" => "afeez1131",
@@ -44,7 +52,7 @@ Vagrant.configure("2") do |config|
 
             apt-get install -y redis-tools
 
-            # Configure Redis to allow remote connections
+            # By default Redis only listens on 127.0.0.1; bind 0.0.0.0 lets ngx01 connect over the private network
             sed -i "s/bind 127.0.0.1 ::1/bind 0.0.0.0/" /etc/redis/redis.conf
             systemctl enable redis-server
             systemctl start redis-server
@@ -62,12 +70,14 @@ Vagrant.configure("2") do |config|
         ngx01.vm.provider "vmware_desktop" do |vmware|
             vmware.gui = false
             vmware.allowlist_verified = true
-            vmware.memory = 2048   # or at least 1024
+            # FastAPI + Nginx under load needs more than the 512 MB default
+            vmware.memory = 2048
             vmware.cpus = 2
         end
 
-        ngx01.vm.provision "shell", 
+        ngx01.vm.provision "shell",
             path: "provision_ngx01.sh",
+            # Same credentials as fdb01 — provision_ngx01.sh writes them into the .env file
             env: {
                 "DB_NAME" => "demo",
                 "DB_USER" => "afeez1131",
